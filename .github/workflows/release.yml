@@ -1,9 +1,13 @@
 name: Release
 
-# Публикация релиза: git tag v1.0.0 && git push --tags
+# Релиз создаётся автоматически: поднимите STC_VERSION в stats-table-card.js
+# и отправьте в main — будет создан тег vX.Y.Z и релиз с JS-файлом.
+# Можно запустить и вручную (Actions → Release → Run workflow).
 on:
   push:
-    tags: ["v*"]
+    branches: [main]
+    paths: [stats-table-card.js, .github/workflows/release.yml]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -13,11 +17,30 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Check version matches tag
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node --check stats-table-card.js
+      - run: node --test tests/*.test.mjs
+      - name: Read version
+        id: v
         run: |
           V=$(grep -oP 'const STC_VERSION = "\K[^"]+' stats-table-card.js)
-          test "v$V" = "${GITHUB_REF_NAME}" || { echo "STC_VERSION=$V, tag=${GITHUB_REF_NAME}"; exit 1; }
+          echo "tag=v$V" >> "$GITHUB_OUTPUT"
+          if git rev-parse "v$V" >/dev/null 2>&1; then echo "exists=1" >> "$GITHUB_OUTPUT"; else echo "exists=0" >> "$GITHUB_OUTPUT"; fi
+      - name: Release notes from CHANGELOG
+        if: steps.v.outputs.exists == '0'
+        run: |
+          V=${{ steps.v.outputs.tag }}
+          awk -v v="${V#v}" '$0 ~ "^## "v" " {f=1; next} /^## / && f {exit} f' CHANGELOG.md > notes.md
+          cat notes.md
       - uses: softprops/action-gh-release@v2
+        if: steps.v.outputs.exists == '0'
         with:
+          tag_name: ${{ steps.v.outputs.tag }}
+          name: Stats Table Card ${{ steps.v.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          body_path: notes.md
           files: stats-table-card.js
-          generate_release_notes: true

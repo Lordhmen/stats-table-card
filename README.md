@@ -389,6 +389,8 @@ node --test tests/*.test.mjs       # тесты (Node.js 18+)
 python3 -m http.server             # затем открыть /docs/demo.html — демо без Home Assistant
 ```
 
+Новый релиз: поднимите `STC_VERSION` в `stats-table-card.js`, допишите `CHANGELOG.md` и отправьте в `main` — тег и релиз GitHub Actions создаст сам.
+
 Ошибки и пожелания — в [Issues](https://github.com/Lordhmen/stats-table-card/issues).
 
 ## Лицензия
