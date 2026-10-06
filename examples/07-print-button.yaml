@@ -1,0 +1,14 @@
+# Таблица + кнопка печати (нужен custom:button-card из HACS).
+type: vertical-stack
+cards:
+  - type: custom:stats-table-card
+    title: Ведомость
+    period: day
+    columns:
+      - { entity: sensor.water_main_total, name: Объём, unit: м³, stat: change }
+  - type: custom:button-card
+    name: Печать
+    icon: mdi:printer
+    tap_action:
+      action: javascript
+      javascript: "[[[ window.print(); ]]]"

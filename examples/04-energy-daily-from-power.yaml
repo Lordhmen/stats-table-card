@@ -1,0 +1,65 @@
+# Энергия по суткам из сенсора мощности (кВт): сумма часовых средних = кВт·ч.
+# Начиная с prefer_since для завершённых суток используется точный накопитель (кВт·ч).
+# Внизу — сводная строка по двум дополнительным сенсорам за весь период.
+type: custom:stats-table-card
+title: Ведомость за период
+subtitle: Активная мощность (кВт) и энергия (кВт·ч) за {range}
+period: day
+date_format: DD.MM
+font_size: 1.05em
+footer_labels: false
+footer_title: ИТОГО
+default_range: month
+prefer_since: "2026-10-06"
+columns:
+  - group: Ввод 1
+    entity: sensor.input1_power_kw
+    name: Энер.
+    unit: кВт·ч
+    source_period: hour
+    stat: mean
+    agg: sum
+    decimals: 0
+    footer: sum
+    prefer:
+      entity: sensor.input1_energy_kwh     # накопительный сенсор, state_class: total_increasing
+      stat: change
+  - group: Ввод 1
+    entity: sensor.input1_power_kw
+    name: Мощ.
+    unit: кВт
+    source_period: hour
+    stat: mean
+    agg: avg_nonzero
+    decimals: 0
+    footer: avg_nonzero
+    dim: true
+    prefer:
+      entity: sensor.input1_energy_kwh
+      stat: change
+      source_period: hour
+      agg: avg_nonzero                     # средний кВт·ч за час = средняя мощность
+  - group: Ввод 2
+    entity: sensor.input2_power_kw
+    name: Энер.
+    unit: кВт·ч
+    source_period: hour
+    stat: mean
+    agg: sum
+    decimals: 0
+    footer: sum
+  - group: Ввод 2
+    entity: sensor.input2_power_kw
+    name: Мощ.
+    unit: кВт
+    source_period: hour
+    stat: mean
+    agg: avg_nonzero
+    decimals: 0
+    footer: avg_nonzero
+    dim: true
+summary:
+  - label: ГН / ВН
+    cells:
+      - { prefix: "ГН: ", entity: sensor.ratio_gn, stat: mean, decimals: 1, suffix: "%", span: 2, gend: true }
+      - { prefix: "ВН: ", entity: sensor.ratio_vn, stat: mean, decimals: 1, suffix: "%", span: 2 }

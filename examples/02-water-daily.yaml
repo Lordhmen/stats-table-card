@@ -1,0 +1,33 @@
+# Суточная ведомость за период: объём за сутки и средний часовой расход
+# только по часам, когда расход был (avg_nonzero), в м³/мин.
+type: custom:stats-table-card
+title: Ведомость по ХВС за период
+subtitle: Учёт расхода холодной воды за {range}
+period: day
+date_format: DD.MM
+font_size: 1.05em
+footer_labels: false
+footer_title: ИТОГО
+default_range: month
+storage_key: water-daily
+columns:
+  - group: Основной ввод
+    entity: sensor.water_main_total
+    name: Объём
+    unit: м³
+    stat: change
+    decimals: 2
+    highlight:
+      - { above: 130, level: warn, row: true }
+      - { above: 160, level: bad, row: true }
+  - group: Основной ввод
+    entity: sensor.water_main_total
+    name: Расход ср.
+    unit: м³/мин
+    source_period: hour
+    stat: change
+    agg: avg_nonzero
+    multiplier: 0.016666666666666666       # м³/ч → м³/мин
+    decimals: 3
+    footer: avg
+    dim: true

@@ -1,0 +1,18 @@
+# Помесячный отчёт за год.
+type: custom:stats-table-card
+title: Потребление по месяцам
+period: month
+default_range: year
+presets: [year]
+date_header: Месяц
+columns:
+  - entity: sensor.water_main_total
+    name: Вода
+    unit: м³
+    stat: change
+    decimals: 1
+  - entity: sensor.input1_energy_kwh
+    name: Энергия
+    unit: кВт·ч
+    stat: change
+    decimals: 0

@@ -1,0 +1,51 @@
+# Часовая ведомость по двум вводам воды: объём за час + расход в минуту (формула),
+# подсветка больших часовых расходов.
+type: custom:stats-table-card
+title: Ведомость по ХВС
+subtitle: Учёт расхода холодной воды за {range}
+period: hour
+date_header: Дата/Час
+font_size: 1.05em
+refresh_interval: 120
+default_range: today
+storage_key: water-hourly
+footers:
+  - title: СРЕДНЕЕ / ИТОГО
+columns:
+  - group: Основной ввод
+    name: Расход
+    unit: м³/мин
+    formula: c1 / 60
+    decimals: 3
+    footer: avg
+  - group: Основной ввод
+    entity: sensor.water_main_total        # state_class: total_increasing
+    name: Объём
+    unit: м³
+    source_period: 5minute                 # час собирается из 5-минутных интервалов
+    stat: change
+    agg: sum
+    fallback_stat: change                  # для дат старше purge_keep_days — часовая статистика
+    decimals: 2
+    footer: sum
+    dim: true
+    highlight:
+      - { above: 10, level: warn, row: true }
+      - { above: 15, level: bad, row: true }
+  - group: Резервный ввод
+    name: Расход
+    unit: м³/мин
+    formula: c3 / 60
+    decimals: 3
+    footer: avg
+  - group: Резервный ввод
+    entity: sensor.water_reserve_total
+    name: Объём
+    unit: м³
+    source_period: 5minute
+    stat: change
+    agg: sum
+    fallback_stat: change
+    decimals: 2
+    footer: sum
+    dim: true

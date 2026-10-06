@@ -1,0 +1,45 @@
+# Параметры пара по суткам: средние температура и давление с подсветкой просадок,
+# суммарные расход, конденсат и гигакалории.
+type: custom:stats-table-card
+title: Ведомость по пару
+subtitle: Учёт параметров пара за {range}
+period: day
+font_size: 1.05em
+default_range: month
+columns:
+  - entity: sensor.steam_temperature       # state_class: measurement
+    stat: mean
+    name: Температура
+    unit: °C
+    decimals: 2
+    footer: avg
+    highlight:
+      - { below: 162, level: warn, row: true }
+      - { below: 155, level: bad, row: true }
+  - entity: sensor.steam_pressure
+    stat: mean
+    name: Давление изб.
+    unit: кгс/см²
+    decimals: 2
+    footer: avg
+    highlight:
+      - { below: 6.7, level: warn, row: true }
+      - { below: 6.0, level: bad, row: true }
+  - entity: sensor.steam_total
+    stat: change
+    name: Расход
+    unit: м³
+    decimals: 2
+    footer_decimals: 3
+  - entity: sensor.condensate_tonnes
+    stat: change
+    name: Конденсат
+    unit: т
+    decimals: 3
+    dim: true
+  - entity: sensor.steam_gcal
+    stat: change
+    name: Гигакалории
+    unit: Гкал
+    decimals: 3
+    dim: true

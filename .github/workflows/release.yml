@@ -1,0 +1,23 @@
+name: Release
+
+# Публикация релиза: git tag v1.0.0 && git push --tags
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check version matches tag
+        run: |
+          V=$(grep -oP 'const STC_VERSION = "\K[^"]+' stats-table-card.js)
+          test "v$V" = "${GITHUB_REF_NAME}" || { echo "STC_VERSION=$V, tag=${GITHUB_REF_NAME}"; exit 1; }
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: stats-table-card.js
+          generate_release_notes: true

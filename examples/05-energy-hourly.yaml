@@ -1,0 +1,30 @@
+# Часовая ведомость мощности: значение на конец часа (последний 5-минутный интервал),
+# для старых дат — среднее за час. Две строки итогов: средняя мощность и сумма (кВт·ч).
+type: custom:stats-table-card
+title: Ведомость по заводу
+subtitle: Активная мощность (кВт) за {range}
+period: hour
+date_header: Дата/Час
+font_size: 1.05em
+refresh_interval: 120
+default_range: today
+footers:
+  - { title: СРЕДНЕЕ, unit: (кВт), agg: avg_nonzero, dim: true }
+  - { title: ИТОГО, unit: (кВт·ч), agg: sum }
+columns:
+  - entity: sensor.input1_power_kw
+    name: Ввод 1
+    unit: кВт
+    source_period: 5minute
+    stat: mean
+    agg: last
+    fallback_stat: mean
+    decimals: 1
+  - entity: sensor.input2_power_kw
+    name: Ввод 2
+    unit: кВт
+    source_period: 5minute
+    stat: mean
+    agg: last
+    fallback_stat: mean
+    decimals: 1

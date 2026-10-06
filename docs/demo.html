@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>stats-table-card demo</title>
+<!-- Демо-страница без Home Assistant: данные генерируются заглушкой hass.callWS.
+     Открыть локально: python3 -m http.server в корне репозитория → /docs/demo.html -->
+<style>
+  :root { --primary-color:#03a9f4; --primary-text-color:#e1e1e1; --secondary-text-color:#9b9b9b;
+    --divider-color:rgba(225,225,225,.12); --card-background-color:#1c1c1c; --secondary-background-color:#282828;
+    --disabled-text-color:#6f6f6f; --text-primary-color:#fff; }
+  body { margin:0; padding:24px; background:#111; color:var(--primary-text-color);
+    font-family: Roboto, "Segoe UI", system-ui, sans-serif; }
+  stats-table-card { display:block; max-width:980px; margin:0 auto 24px; }
+</style>
+<script>
+  // Фиксированное «сейчас»: 05.10.2026 17:20 (Asia/Yekaterinburg)
+  const NOW = Date.parse("2026-10-05T12:20:00Z");
+  Date.now = () => NOW;
+  try { localStorage.clear(); } catch (_) {}
+</script>
+<script>
+  // Простая замена ha-card (в Home Assistant она уже есть)
+  customElements.define("ha-card", class extends HTMLElement {
+    constructor() { super(); this.attachShadow({ mode: "open" }).innerHTML =
+      "<style>:host{display:block;background:var(--card-background-color);border-radius:12px;border:1px solid var(--divider-color)}</style><slot></slot>"; }
+  });
+</script>
+<script src="../stats-table-card.js"></script>
+</head>
+<body>
+<div id="cards"></div>
+<script>
+const H = 3600000, D = 86400000;
+let seed = 7;
+const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+const series = {};
+function gen(id, period, startMs, endMs, fn) {
+  const step = period === "5minute" ? 300000 : period === "hour" ? H : D;
+  const out = [];
+  for (let t = startMs; t < endMs; t += step) out.push({ start: t, ...fn(t) });
+  return out;
+}
+const local = (t) => new Date(t + 5 * H);
+const hass = {
+  config: { time_zone: "Asia/Yekaterinburg" },
+  states: {},
+  async callWS(m) {
+    const s = Date.parse(m.start_time), e = Date.parse(m.end_time), res = {};
+    for (const id of m.statistic_ids) {
+      res[id] = gen(id, m.period, s, e, (t) => {
+        const h = local(t).getUTCHours(), dd = local(t).getUTCDate();
+        const k = m.period === "day" ? 24 : m.period === "hour" ? 1 : 1 / 12;
+        const work = h >= 7 && h < 20 ? 1 : 0.35;
+        switch (id) {
+          case "sensor.steam_temperature": return { mean: dd === 30 ? 152.4 : dd === 22 ? 158.6 : 163 + rnd() * 3 };
+          case "sensor.steam_pressure": return { mean: dd === 30 ? 5.7 : dd === 14 ? 6.55 : 6.8 + rnd() * 0.4 };
+          case "sensor.steam_total": return { change: k * (14 + rnd() * 3) * (dd === 30 ? 0.4 : 1) };
+          case "sensor.condensate_tonnes": return { change: k * (0.9 + rnd() * 0.2) };
+          case "sensor.steam_gcal": return { change: k * (0.55 + rnd() * 0.1) };
+          case "sensor.water_main_total": return { change: k * (3 + rnd() * 3) * (m.period === "day" ? 1 : work) * (dd === 12 ? 1.6 : 1) * (m.period === "hour" && h === 10 ? 2.4 : m.period === "hour" && h === 14 ? 3.2 : 1) };
+          case "sensor.water_reserve_total": return { change: k * (0.6 + rnd()) * (m.period === "day" ? 1 : work) };
+          default: return { mean: 0 };
+        }
+      });
+    }
+    return res;
+  },
+};
+
+function add(config) {
+  const el = document.createElement("stats-table-card");
+  el.setConfig({ refresh_interval: 0, ...config });
+  document.getElementById("cards").appendChild(el);
+  el.hass = hass;
+  return el;
+}
+
+add({
+  title: "Ведомость по пару",
+  subtitle: "Параметры пара за {range}",
+  period: "day",
+  font_size: "1.05em",
+  storage_key: "demo-steam",
+  default_range: "prev_month",
+  columns: [
+    { entity: "sensor.steam_temperature", stat: "mean", name: "Температура", unit: "°C", decimals: 2, footer: "avg",
+      highlight: [{ below: 162, level: "warn", row: true }, { below: 155, level: "bad", row: true }] },
+    { entity: "sensor.steam_pressure", stat: "mean", name: "Давление", unit: "кгс/см²", decimals: 2, footer: "avg",
+      highlight: [{ below: 6.7, level: "warn", row: true }, { below: 6.0, level: "bad", row: true }] },
+    { entity: "sensor.steam_total", stat: "change", name: "Расход", unit: "м³", decimals: 2, footer: "sum" },
+    { entity: "sensor.condensate_tonnes", stat: "change", name: "Конденсат", unit: "т", decimals: 3, dim: true },
+    { entity: "sensor.steam_gcal", stat: "change", name: "Гигакалории", unit: "Гкал", decimals: 3, dim: true },
+  ],
+});
+
+add({
+  title: "Ведомость по ХВС",
+  subtitle: "Расход холодной воды за {range}",
+  period: "hour",
+  date_header: "Дата/Час",
+  font_size: "1.05em",
+  storage_key: "demo-water",
+  default_range: "today",
+  footers: [{ title: "СРЕДНЕЕ / ИТОГО" }],
+  columns: [
+    { group: "Основной ввод", name: "Расход", unit: "м³/мин", formula: "c1 / 60", decimals: 3, footer: "avg" },
+    { group: "Основной ввод", entity: "sensor.water_main_total", name: "Объём", unit: "м³", stat: "change", decimals: 2, footer: "sum", dim: true,
+      highlight: [{ above: 10, level: "warn", row: true }, { above: 15, level: "bad", row: true }] },
+    { group: "Резервный ввод", name: "Расход", unit: "м³/мин", formula: "c3 / 60", decimals: 3, footer: "avg" },
+    { group: "Резервный ввод", entity: "sensor.water_reserve_total", name: "Объём", unit: "м³", stat: "change", decimals: 2, footer: "sum", dim: true },
+  ],
+});
+</script>
+</body>
+</html>
