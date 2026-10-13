@@ -171,3 +171,17 @@ test("period: week — строки с понедельника, подпись 
   assert.deepEqual(el._rows.map((r) => r.v.c0), [10, 3]);
   assert.equal(el._rowLabel(el._rows[0].start), "28.09–04.10");
 });
+
+test("выделение: статистика и копирование для Excel", async () => {
+  const el = await render(
+    { period: "day", default_range: "3d", columns: [{ entity: "sensor.a", stat: "change", decimals: 1 }, { entity: "sensor.b", stat: "change", decimals: 2 }] },
+    async (m) => (m.period === "day" ? {
+      "sensor.a": [{ start: MID - 2 * 86400000, change: 1 }, { start: MID - 86400000, change: 2 }],
+      "sensor.b": [{ start: MID - 2 * 86400000, change: 10 }, { start: MID - 86400000, change: 20 }],
+    } : {})
+  );
+  el._selCells = new Set([el._cellKey(0, 0), el._cellKey(1, 0), el._cellKey(1, 1), el._cellKey(2, 0)]);
+  const st = el._selStats(el._selValues().filter((v) => v.ci === 0));
+  assert.deepEqual({ n: st.n, sum: st.sum, avg: st.avg, min: st.min, max: st.max }, { n: 2, sum: 3, avg: 1.5, min: 1, max: 2 }); // пустая ячейка не считается
+  assert.equal(el._selText(), "1,0\t\r\n2,0\t20,00\r\n\t");
+});

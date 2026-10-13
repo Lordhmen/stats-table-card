@@ -28,6 +28,7 @@ This card reads pre-aggregated statistics through the websocket API (`recorder/s
 - Built-in period picker: date inputs, ◀ ▶ shifting, presets, remembered selection, `?from=&to=` URL parameters.
 - Live "today" row from 5-minute statistics, auto refresh.
 - `prefer`: an exact source (e.g. an energy meter) for completed intervals, with a fallback calculation for the rest.
+- Excel-like cell selection: sum / average / min / max of the selected cells, Ctrl+C copies them to Excel (drag, Shift+click, Ctrl+click, click a header for a column or a date for a row; tap on touch screens).
 - CSV export (Excel friendly), print styles, theme aware, single file without dependencies.
 
 ## Installation
@@ -56,7 +57,7 @@ The sensor must have a `state_class`:
 
 ## Main options
 
-Card: `columns`, `period`, `title`, `subtitle` (`{range}` placeholder), `date_header`, `date_format` (`DD.MM`), `decimal_separator`, `empty`, `font_size`, `column_borders`, `footers`, `footer_title`, `footer_labels`, `summary`, `live_today`, `refresh_interval`, `csv`, `show_debug`, `prefer_since`, `time_zone`.
+Card: `columns`, `period`, `title`, `subtitle` (`{range}` placeholder), `date_header`, `date_format` (`DD.MM`), `decimal_separator`, `empty`, `font_size`, `column_borders`, `footers`, `footer_title`, `footer_labels`, `summary`, `live_today`, `refresh_interval`, `csv`, `selection`, `show_debug`, `prefer_since`, `time_zone`.
 
 Period picker: `controls`, `default_range`, `presets` (`today`, `yesterday`, `3d`, `7d`, `30d`, `month`, `prev_month`, `year`), `storage_key`, `url_params`, legacy `start_entity` / `end_entity`.
 

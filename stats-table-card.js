@@ -8,7 +8,7 @@
  * https://github.com/Lordhmen/stats-table-card
  * Лицензия: MIT. История изменений — CHANGELOG.md.
  */
-const STC_VERSION = "1.0.0";
+const STC_VERSION = "1.1.0";
 
 function tzParts(ms, tz) {
   const dtf = new Intl.DateTimeFormat("en-US", {
@@ -232,6 +232,7 @@ class StatsTableCard extends HTMLElement {
     if (sec > 0 && !this._timer) this._timer = setInterval(() => this._load(), sec * 1000);
   }
   disconnectedCallback() {
+    this._unbindDoc();
     if (this._timer) clearInterval(this._timer);
     this._timer = null;
   }
@@ -689,12 +690,26 @@ class StatsTableCard extends HTMLElement {
         .legend .lg { display: inline-flex; align-items: center; gap: 6px; }
         .legend .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
         .legend .sw.hl-warn { background: #ffa726; } .legend .sw.hl-bad { background: #f44336; } .legend .sw.hl-good { background: #4caf50; }
+        table.selectable tbody td[data-c], table.selectable thead th[data-c], table.selectable tbody td.date { cursor: cell; user-select: none; -webkit-user-select: none; }
+        table.selectable thead th[data-c], table.selectable tbody td.date { cursor: pointer; }
+        td.sel { box-shadow: inset 0 0 0 9999px rgba(3, 169, 244, .28); outline: 1px solid rgba(3, 169, 244, .7); outline-offset: -1px; }
+        .selbar { position: sticky; bottom: 0; z-index: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; margin-top: 8px; padding: 8px 12px;
+          border-radius: 8px; background: var(--secondary-background-color, rgba(127,127,127,.15)); border: 1px solid var(--divider-color); font-size: .9em; }
+        .selbar[hidden] { display: none; }
+        .selbar .sl { display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: baseline; }
+        .selbar .sl.sub { flex-basis: 100%; }
+        .selbar .nm { color: var(--secondary-text-color); min-width: 12em; }
+        .selbar .u { color: var(--secondary-text-color); }
+        .selbar .sa { margin-left: auto; display: flex; gap: 6px; }
+        .selbar button { font: inherit; font-size: .9em; cursor: pointer; color: var(--primary-text-color); background: none;
+          border: 1px solid var(--divider-color); border-radius: 8px; padding: 3px 10px; }
         .msg { padding: 16px; text-align: center; color: var(--secondary-text-color); }
         .err { color: var(--error-color, #db4437); }
         @media print {
           td[class*="hl-"], .legend .sw, tr[class*="row-"] td.date { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           td.hl-warn { color: #8a4b00; } td.hl-bad { color: #9b1c1c; } td.hl-good { color: #1b5e20; }
-          .tools, #bar { display: none !important; }
+          .tools, #bar, .selbar { display: none !important; }
+          td.sel { box-shadow: none; outline: none; }
           ha-card { box-shadow: none; border: none; }
           thead th { background: none; }
         }
@@ -728,7 +743,7 @@ class StatsTableCard extends HTMLElement {
     const c = this._config;
     const dateTh = (rs) => `<th class="date"${rs ? ` rowspan="${rs}"` : ""}>${esc(c.date_header || "Дата")}</th>`;
     if (!this._hasGroups) {
-      return `<tr>${dateTh()}${this._columns.map((col) => `<th${col._groupEnd ? ' class="gend"' : ""}>${this._colHead(col)}</th>`).join("")}</tr>`;
+      return `<tr>${dateTh()}${this._columns.map((col, ci) => `<th data-c="${ci}"${col._groupEnd ? ' class="gend"' : ""}>${this._colHead(col)}</th>`).join("")}</tr>`;
     }
     let top = "";
     const sub = [];
@@ -736,7 +751,7 @@ class StatsTableCard extends HTMLElement {
     for (let i = 0; i < cols.length; ) {
       const g = cols[i].group;
       if (!g) {
-        top += `<th rowspan="2"${cols[i]._groupEnd ? ' class="gend"' : ""}>${this._colHead(cols[i])}</th>`;
+        top += `<th rowspan="2" data-c="${i}"${cols[i]._groupEnd ? ' class="gend"' : ""}>${this._colHead(cols[i])}</th>`;
         i++;
         continue;
       }
@@ -744,7 +759,7 @@ class StatsTableCard extends HTMLElement {
       while (j < cols.length && cols[j].group === g) j++;
       const lastCol = cols[j - 1];
       top += `<th colspan="${j - i}"${lastCol._groupEnd ? ' class="gend"' : ""}>${esc(g)}</th>`;
-      for (let k = i; k < j; k++) sub.push(`<th${cols[k]._groupEnd ? ' class="gend"' : ""}>${this._colHead(cols[k])}</th>`);
+      for (let k = i; k < j; k++) sub.push(`<th data-c="${k}"${cols[k]._groupEnd ? ' class="gend"' : ""}>${this._colHead(cols[k])}</th>`);
       i = j;
     }
     return `<tr class="grp">${dateTh(2)}${top}</tr><tr>${sub.join("")}</tr>`;
@@ -757,19 +772,19 @@ class StatsTableCard extends HTMLElement {
     const subtitle = (c.subtitle || "За {range}").replace("{range}", this._dateLabel());
 
     const body = this._rows
-      .map((r) => {
+      .map((r, ri) => {
         let rowLevel = null;
         const cells = this._columns
-          .map((col) => {
+          .map((col, ci) => {
             const x = r.v[col._key];
             const hr = col.highlight ? pickRule(x, col.highlight) : null;
             if (hr && hr.row && (!rowLevel || HL_RANK[hr.level || "warn"] > HL_RANK[rowLevel])) rowLevel = hr.level || "warn";
             const cls = [x === null ? "empty" : "", col.dim && !hr ? "dim" : "", col._groupEnd ? "gend" : "", hr ? `hl-${hr.level || "warn"}` : ""].join(" ").trim();
             const tip = hr ? ` title="${esc(ruleText(hr, col, c.decimal_separator))}"` : "";
-            return `<td${cls ? ` class="${cls}"` : ""}${tip}>${this._fmt(x, col.decimals)}</td>`;
+            return `<td data-r="${ri}" data-c="${ci}"${cls ? ` class="${cls}"` : ""}${tip}>${this._fmt(x, col.decimals)}</td>`;
           })
           .join("");
-        return `<tr${rowLevel ? ` class="row-${rowLevel}"` : ""}><td class="date">${this._rowLabel(r.start)}</td>${cells}</tr>`;
+        return `<tr${rowLevel ? ` class="row-${rowLevel}"` : ""}><td class="date" data-r="${ri}">${this._rowLabel(r.start)}</td>${cells}</tr>`;
       })
       .join("");
 
@@ -818,13 +833,234 @@ class StatsTableCard extends HTMLElement {
       </div>
       <hr>
       ${this._rows.length ? "" : `<div class="msg">Нет данных за период</div>`}
-      <div class="wrap"><table${c.column_borders === false ? "" : ' class="cb"'}>
+      <div class="wrap"><table class="${[c.column_borders === false ? "" : "cb", c.selection === false ? "" : "selectable"].join(" ").trim()}">
         <thead>${this._renderHead()}</thead>
         <tbody>${body}</tbody>${foot ? `<tfoot>${foot}</tfoot>` : ""}
-      </table></div>${this._legend()}`;
+      </table></div><div class="selbar" hidden></div>${this._legend()}`;
 
     const btn = root.querySelector("#csv");
     if (btn) btn.addEventListener("click", () => this._downloadCsv());
+    if (c.selection !== false) this._bindSelection(root);
+  }
+
+  // ---------- Выделение ячеек (как строка состояния Excel) ----------
+
+  _cellKey(r, ci) {
+    return `${this._rows[r].start}:${ci}`;
+  }
+
+  _bindSelection(root) {
+    const table = root.querySelector("table");
+    if (!table) return;
+    if (!this._selCells) this._selCells = new Set();
+    // Выделение привязано к периоду: при смене диапазона сбрасываем
+    if (this._selRange !== this._rangeKey) {
+      this._selCells.clear();
+      this._anchor = null;
+      this._selRange = this._rangeKey;
+    }
+    const cellOf = (e) => {
+      const td = e.target.closest && e.target.closest("td[data-c], td.date[data-r], th[data-c]");
+      return td && table.contains(td) ? td : null;
+    };
+    let lastPointer = "mouse";
+    table.addEventListener("pointerdown", (e) => {
+      lastPointer = e.pointerType || "mouse";
+      if (lastPointer === "touch" || e.button !== 0) return; // касания обрабатываются по click
+      const el = cellOf(e);
+      if (!el) return;
+      e.preventDefault();
+      this._selActive = true;
+      const add = e.ctrlKey || e.metaKey;
+      if (el.tagName === "TH") return this._selectWhole("col", +el.dataset.c, add);
+      if (!el.dataset.c) return this._selectWhole("row", +el.dataset.r, add);
+      const r = +el.dataset.r, ci = +el.dataset.c;
+      if (e.shiftKey && this._anchor) {
+        this._dragBase = add ? new Set(this._selCells) : new Set();
+        this._selectRect(this._anchor, { r, c: ci });
+      } else if (add) {
+        const k = this._cellKey(r, ci);
+        this._selCells.has(k) ? this._selCells.delete(k) : this._selCells.add(k);
+        this._anchor = { r, c: ci };
+        this._dragBase = new Set(this._selCells);
+        this._applySel();
+      } else {
+        this._anchor = { r, c: ci };
+        this._dragBase = new Set();
+        this._selectRect(this._anchor, this._anchor);
+      }
+      this._dragging = true;
+    });
+    table.addEventListener("pointerover", (e) => {
+      if (!this._dragging) return;
+      const el = cellOf(e);
+      if (el && el.dataset.c && el.dataset.r !== undefined && this._anchor) this._selectRect(this._anchor, { r: +el.dataset.r, c: +el.dataset.c });
+    });
+    table.addEventListener("click", (e) => {
+      if (lastPointer !== "touch") return;
+      const el = cellOf(e);
+      if (!el) return;
+      this._selActive = true;
+      if (el.tagName === "TH") return this._selectWhole("col", +el.dataset.c, true);
+      if (!el.dataset.c) return this._selectWhole("row", +el.dataset.r, true);
+      const k = this._cellKey(+el.dataset.r, +el.dataset.c);
+      this._selCells.has(k) ? this._selCells.delete(k) : this._selCells.add(k);
+      this._applySel();
+    });
+    if (!this._docHandlers) {
+      const up = () => { this._dragging = false; };
+      const down = (e) => { if (!e.composedPath().includes(this)) this._selActive = false; };
+      const key = (e) => {
+        if (!this._selActive || !this._selCells?.size) return;
+        if (e.key === "Escape") this._clearSel();
+        else if ((e.ctrlKey || e.metaKey) && (e.key === "c" || e.key === "с" || e.code === "KeyC")) {
+          e.preventDefault();
+          this._copySel();
+        }
+      };
+      this._docHandlers = { up, down, key };
+      window.addEventListener("pointerup", up);
+      document.addEventListener("pointerdown", down, true);
+      document.addEventListener("keydown", key);
+    }
+    this._applySel();
+  }
+
+  _unbindDoc() {
+    const h = this._docHandlers;
+    if (!h) return;
+    window.removeEventListener("pointerup", h.up);
+    document.removeEventListener("pointerdown", h.down, true);
+    document.removeEventListener("keydown", h.key);
+    this._docHandlers = null;
+  }
+
+  _selectRect(a, b) {
+    const set = new Set(this._dragBase || []);
+    const [r1, r2] = [Math.min(a.r, b.r), Math.max(a.r, b.r)];
+    const [c1, c2] = [Math.min(a.c, b.c), Math.max(a.c, b.c)];
+    for (let r = r1; r <= r2; r++) for (let ci = c1; ci <= c2; ci++) set.add(this._cellKey(r, ci));
+    this._selCells = set;
+    this._applySel();
+  }
+
+  _selectWhole(kind, idx, add) {
+    const keys = kind === "col"
+      ? this._rows.map((_, r) => this._cellKey(r, idx))
+      : this._columns.map((_, ci) => this._cellKey(idx, ci));
+    const all = keys.every((k) => this._selCells.has(k));
+    if (!add) this._selCells.clear();
+    for (const k of keys) all && add ? this._selCells.delete(k) : this._selCells.add(k);
+    this._anchor = kind === "col" ? { r: 0, c: idx } : { r: idx, c: 0 };
+    this._applySel();
+  }
+
+  _clearSel() {
+    this._selCells?.clear();
+    this._anchor = null;
+    this._applySel();
+  }
+
+  // Выбранные значения: [{r, ci, x}] в порядке строк и столбцов
+  _selValues() {
+    const out = [];
+    if (!this._selCells?.size) return out;
+    this._rows.forEach((row, r) => this._columns.forEach((col, ci) => {
+      if (this._selCells.has(`${row.start}:${ci}`)) out.push({ r, ci, x: row.v[col._key] });
+    }));
+    return out;
+  }
+
+  _selStats(vals) {
+    const nums = vals.map((v) => v.x).filter(nn);
+    if (!nums.length) return null;
+    const sum = nums.reduce((a, b) => a + b, 0);
+    return { n: nums.length, sum, avg: sum / nums.length, min: Math.min(...nums), max: Math.max(...nums) };
+  }
+
+  _applySel() {
+    const root = this.shadowRoot?.getElementById("root");
+    if (!root) return;
+    const keys = this._selCells || new Set();
+    root.querySelectorAll("td[data-c]").forEach((td) => {
+      const r = +td.dataset.r;
+      td.classList.toggle("sel", !!this._rows[r] && keys.has(this._cellKey(r, +td.dataset.c)));
+    });
+    const bar = root.querySelector(".selbar");
+    if (!bar) return;
+    const vals = this._selValues();
+    if (!vals.length) { bar.hidden = true; bar.innerHTML = ""; return; }
+    const cols = [...new Set(vals.map((v) => v.ci))];
+    const units = new Set(cols.map((ci) => this._columns[ci].unit || ""));
+    const dec = Math.max(...cols.map((ci) => this._columns[ci].decimals ?? 2));
+    const line = (st, d, label = "") => st
+      ? `${label}<span>Сумма: <b>${this._fmt(st.sum, d)}</b></span><span>Среднее: <b>${this._fmt(st.avg, d)}</b></span>` +
+        `<span>Мин: <b>${this._fmt(st.min, d)}</b></span><span>Макс: <b>${this._fmt(st.max, d)}</b></span>`
+      : `${label}<span>нет чисел</span>`;
+    let html = `<div class="sl"><span>Выделено: <b>${vals.length}</b></span>`;
+    if (cols.length === 1 || units.size === 1) {
+      const u = [...units][0];
+      html += line(this._selStats(vals), dec) + (u ? `<span class="u">${esc(u)}</span>` : "");
+      html += `</div>`;
+    } else {
+      html += `</div>`;
+      for (const ci of cols) {
+        const col = this._columns[ci];
+        const name = `${col.group ? col.group + " · " : ""}${col.name || col.entity || ""}${col.unit ? `, ${col.unit}` : ""}`;
+        html += `<div class="sl sub">${line(this._selStats(vals.filter((v) => v.ci === ci)), col.decimals ?? 2, `<span class="nm">${esc(name)}</span>`)}</div>`;
+      }
+    }
+    html += `<div class="sa"><button data-a="copy" title="Скопировать для Excel (Ctrl+C)">Копировать</button><button data-a="clear" title="Снять выделение (Esc)">✕</button></div>`;
+    bar.innerHTML = html;
+    bar.hidden = false;
+    bar.querySelector('[data-a="copy"]').addEventListener("click", () => this._copySel());
+    bar.querySelector('[data-a="clear"]').addEventListener("click", () => this._clearSel());
+  }
+
+  // Копирование прямоугольника, охватывающего выделение, в формате TSV (вставляется в Excel по ячейкам)
+  _selText() {
+    const vals = this._selValues();
+    if (!vals.length) return "";
+    const rs = vals.map((v) => v.r), cs = vals.map((v) => v.ci);
+    const [r1, r2, c1, c2] = [Math.min(...rs), Math.max(...rs), Math.min(...cs), Math.max(...cs)];
+    const sep = this._config.decimal_separator === "." ? "." : ",";
+    const lines = [];
+    for (let r = r1; r <= r2; r++) {
+      const row = [];
+      for (let ci = c1; ci <= c2; ci++) {
+        const x = this._rows[r].v[this._columns[ci]._key];
+        const on = this._selCells.has(this._cellKey(r, ci));
+        row.push(on && nn(x) ? Number(x).toFixed(this._columns[ci].decimals ?? 2).replace(".", sep) : "");
+      }
+      lines.push(row.join("\t"));
+    }
+    return lines.join("\r\n");
+  }
+
+  async _copySel() {
+    const text = this._selText();
+    if (!text) return;
+    let ok = false;
+    try {
+      await navigator.clipboard.writeText(text);
+      ok = true;
+    } catch (_) {
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        ok = document.execCommand("copy");
+        ta.remove();
+      } catch (_) {}
+    }
+    const b = this.shadowRoot?.querySelector('.selbar [data-a="copy"]');
+    if (b) {
+      b.textContent = ok ? "Скопировано" : "Не удалось";
+      setTimeout(() => { if (b.isConnected) b.textContent = "Копировать"; }, 1500);
+    }
   }
 
   _legend() {
