@@ -8,7 +8,7 @@
  * https://github.com/Lordhmen/stats-table-card
  * Лицензия: MIT. История изменений — CHANGELOG.md.
  */
-const STC_VERSION = "1.1.0";
+const STC_VERSION = "1.1.1";
 
 function tzParts(ms, tz) {
   const dtf = new Intl.DateTimeFormat("en-US", {
@@ -228,6 +228,8 @@ class StatsTableCard extends HTMLElement {
   }
 
   connectedCallback() {
+    // HA может отсоединять и заново вставлять карточку — обработчики документа вешаем при каждом подключении
+    if (this._config && this._config.selection !== false) this._bindDoc();
     const sec = Number(this._config?.refresh_interval || 0);
     if (sec > 0 && !this._timer) this._timer = setInterval(() => this._load(), sec * 1000);
   }
@@ -907,7 +909,13 @@ class StatsTableCard extends HTMLElement {
       this._selCells.has(k) ? this._selCells.delete(k) : this._selCells.add(k);
       this._applySel();
     });
-    if (!this._docHandlers) {
+    this._bindDoc();
+    this._applySel();
+  }
+
+  _bindDoc() {
+    if (this._docHandlers) return;
+    {
       const up = () => { this._dragging = false; };
       const down = (e) => { if (!e.composedPath().includes(this)) this._selActive = false; };
       const key = (e) => {
@@ -921,9 +929,8 @@ class StatsTableCard extends HTMLElement {
       this._docHandlers = { up, down, key };
       window.addEventListener("pointerup", up);
       document.addEventListener("pointerdown", down, true);
-      document.addEventListener("keydown", key);
+      document.addEventListener("keydown", key, true);
     }
-    this._applySel();
   }
 
   _unbindDoc() {
@@ -931,7 +938,7 @@ class StatsTableCard extends HTMLElement {
     if (!h) return;
     window.removeEventListener("pointerup", h.up);
     document.removeEventListener("pointerdown", h.down, true);
-    document.removeEventListener("keydown", h.key);
+    document.removeEventListener("keydown", h.key, true);
     this._docHandlers = null;
   }
 
