@@ -8,7 +8,7 @@
  * https://github.com/Lordhmen/stats-table-card
  * Лицензия: MIT. История изменений — CHANGELOG.md.
  */
-const STC_VERSION = "1.1.1";
+const STC_VERSION = "1.1.2";
 
 function tzParts(ms, tz) {
   const dtf = new Intl.DateTimeFormat("en-US", {
@@ -639,6 +639,23 @@ class StatsTableCard extends HTMLElement {
     const fs = this._config?.font_size || ".8em";
     this.shadowRoot.innerHTML = `
       <style>
+        /* Цвета от текста темы: одинаково читаемо в тёмной и светлой теме.
+           Значения по умолчанию — для браузеров без color-mix (как в тёмной теме). */
+        :host { --stc-line: #555; --stc-row-line: #333; --stc-stripe: rgba(255,255,255,.05); --stc-sum-bg: rgba(255,255,255,.08);
+          --stc-warn-text: #ffb74d; --stc-bad-text: #ff8a80; --stc-good-text: #81c784; --stc-sel: rgba(3,169,244,.28); --stc-sel-line: rgba(3,169,244,.7); }
+        @supports (color: color-mix(in srgb, red, blue)) {
+          :host {
+            --stc-line: color-mix(in srgb, var(--primary-text-color, #e1e1e1) 30%, transparent);
+            --stc-row-line: color-mix(in srgb, var(--primary-text-color, #e1e1e1) 12%, transparent);
+            --stc-stripe: color-mix(in srgb, var(--primary-text-color, #e1e1e1) 5%, transparent);
+            --stc-sum-bg: color-mix(in srgb, var(--primary-text-color, #e1e1e1) 8%, transparent);
+            --stc-warn-text: color-mix(in srgb, #ff9800 65%, var(--primary-text-color, #e1e1e1));
+            --stc-bad-text: color-mix(in srgb, #f44336 60%, var(--primary-text-color, #e1e1e1));
+            --stc-good-text: color-mix(in srgb, #4caf50 60%, var(--primary-text-color, #e1e1e1));
+            --stc-sel: color-mix(in srgb, var(--primary-color, #03a9f4) 28%, transparent);
+            --stc-sel-line: color-mix(in srgb, var(--primary-color, #03a9f4) 70%, transparent);
+          }
+        }
         ha-card { display: block; padding: 16px; }
         .head { display: grid; grid-template-columns: 1fr 2fr 1fr; align-items: end; }
         .gen { font-family: monospace; font-size: .85em; color: var(--secondary-text-color); line-height: 1.2; font-weight: bold; }
@@ -649,29 +666,29 @@ class StatsTableCard extends HTMLElement {
         .tools button { background: none; border: 1px solid var(--divider-color); color: var(--primary-text-color);
           border-radius: 8px; padding: 4px 10px; font: inherit; font-size: .8em; cursor: pointer; }
         .tools .ms { font-size: .7em; color: var(--secondary-text-color); margin-top: 4px; }
-        hr { border: 0; height: 1px; background: #555; margin: 15px 0; opacity: .3; }
+        hr { border: 0; height: 1px; background: var(--stc-line); margin: 15px 0; }
         .wrap { overflow-x: auto; }
         table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: ${fs}; }
         th, td { text-align: center; padding: 3px 4px; }
-        thead th { border-bottom: 2px solid #555; background: var(--card-background-color, var(--ha-card-background)); }
+        thead th { border-bottom: 2px solid var(--stc-line); background: var(--card-background-color, var(--ha-card-background)); }
         thead th .u { font-weight: normal; font-size: .85em; }
-        thead tr.grp th { border-bottom: 1px solid #555; }
-        th.date, td.date { border-right: 2px solid #555; width: 90px; }
+        thead tr.grp th { border-bottom: 1px solid var(--stc-line); }
+        th.date, td.date { border-right: 2px solid var(--stc-line); width: 90px; }
         td.date { font-weight: bold; }
         table.cb th:not(:last-child), table.cb td:not(:last-child) { border-right: 1px solid rgba(127,127,127,.28); }
         table.cb tr.grp th { border-right: 1px solid rgba(127,127,127,.28); }
-        .gend, table.cb .gend { border-right: 1px solid #555; }
-        th.date, td.date, table.cb th.date, table.cb td.date { border-right: 2px solid #555; }
-        tbody td { border-bottom: 1px solid #333; }
-        tbody tr:nth-child(even) { background: rgba(255,255,255,.05); }
-        td.dim { color: #aaa; }
+        .gend, table.cb .gend { border-right: 1px solid var(--stc-line); }
+        th.date, td.date, table.cb th.date, table.cb td.date { border-right: 2px solid var(--stc-line); }
+        tbody td { border-bottom: 1px solid var(--stc-row-line); }
+        tbody tr:nth-child(even) { background: var(--stc-stripe); }
+        td.dim { color: var(--secondary-text-color, #aaa); }
         td.empty { color: var(--disabled-text-color, #777); }
-        tfoot .lbl th { color: #aaa; font-size: .85em; font-weight: normal; border-top: 2px solid #555; }
+        tfoot .lbl th { color: var(--secondary-text-color, #aaa); font-size: .85em; font-weight: normal; border-top: 2px solid var(--stc-line); }
         tfoot .val td { font-weight: bold; font-size: .9em; }
-        tfoot .val.top td { border-top: 2px solid #555; }
-        tfoot .val.dimrow td { color: #aaa; font-weight: normal; }
+        tfoot .val.top td { border-top: 2px solid var(--stc-line); }
+        tfoot .val.dimrow td { color: var(--secondary-text-color, #aaa); font-weight: normal; }
         tfoot td .u { font-weight: normal; font-size: .8em; }
-        tfoot .sum td { border-top: 1px solid #555; background: rgba(255,255,255,.08); font-size: .95em; }
+        tfoot .sum td { border-top: 1px solid var(--stc-line); background: var(--stc-sum-bg); font-size: .95em; }
         tfoot .sum td.date { color: var(--primary-color); }
         #bar { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; margin-bottom: 12px; }
         #bar .nav, #bar .presets { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
@@ -683,9 +700,9 @@ class StatsTableCard extends HTMLElement {
         #bar button.on { background: var(--primary-color); border-color: var(--primary-color); color: var(--text-primary-color, #fff); }
         #bar button:disabled { opacity: .35; cursor: default; }
         #bar .dash { color: var(--secondary-text-color); }
-        td.hl-warn { background: rgba(255, 167, 38, .22); color: #ffb74d; font-weight: 600; }
-        td.hl-bad { background: rgba(244, 67, 54, .25); color: #ff8a80; font-weight: 700; }
-        td.hl-good { background: rgba(76, 175, 80, .2); color: #81c784; }
+        td.hl-warn { background: rgba(255, 167, 38, .22); color: var(--stc-warn-text); font-weight: 600; }
+        td.hl-bad { background: rgba(244, 67, 54, .25); color: var(--stc-bad-text); font-weight: 700; }
+        td.hl-good { background: rgba(76, 175, 80, .2); color: var(--stc-good-text); }
         tr.row-warn td.date { box-shadow: inset 4px 0 0 #ffa726; }
         tr.row-bad td.date { box-shadow: inset 4px 0 0 #f44336; }
         .legend { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 10px; font-size: .78em; color: var(--secondary-text-color); }
@@ -694,7 +711,7 @@ class StatsTableCard extends HTMLElement {
         .legend .sw.hl-warn { background: #ffa726; } .legend .sw.hl-bad { background: #f44336; } .legend .sw.hl-good { background: #4caf50; }
         table.selectable tbody td[data-c], table.selectable thead th[data-c], table.selectable tbody td.date { cursor: cell; user-select: none; -webkit-user-select: none; }
         table.selectable thead th[data-c], table.selectable tbody td.date { cursor: pointer; }
-        td.sel { box-shadow: inset 0 0 0 9999px rgba(3, 169, 244, .28); outline: 1px solid rgba(3, 169, 244, .7); outline-offset: -1px; }
+        td.sel { box-shadow: inset 0 0 0 9999px var(--stc-sel); outline: 1px solid var(--stc-sel-line); outline-offset: -1px; }
         .selbar { position: sticky; bottom: 0; z-index: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; margin-top: 8px; padding: 8px 12px;
           border-radius: 8px; background: var(--secondary-background-color, rgba(127,127,127,.15)); border: 1px solid var(--divider-color); font-size: .9em; }
         .selbar[hidden] { display: none; }

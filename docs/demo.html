@@ -10,6 +10,10 @@
   :root { --primary-color:#03a9f4; --primary-text-color:#e1e1e1; --secondary-text-color:#9b9b9b;
     --divider-color:rgba(225,225,225,.12); --card-background-color:#1c1c1c; --secondary-background-color:#282828;
     --disabled-text-color:#6f6f6f; --text-primary-color:#fff; }
+  /* ?theme=light — светлая тема HA по умолчанию */
+  :root.light { --primary-text-color:#212121; --secondary-text-color:#727272; --divider-color:rgba(0,0,0,.12);
+    --card-background-color:#fff; --secondary-background-color:#e5e5e5; --disabled-text-color:#bdbdbd; }
+  :root.light body { background:#fafafa; }
   body { margin:0; padding:24px; background:#111; color:var(--primary-text-color);
     font-family: Roboto, "Segoe UI", system-ui, sans-serif; }
   stats-table-card { display:block; max-width:980px; margin:0 auto 24px; }
@@ -19,6 +23,7 @@
   const NOW = Date.parse("2026-10-05T12:20:00Z");
   Date.now = () => NOW;
   try { localStorage.clear(); } catch (_) {}
+  if (new URLSearchParams(location.search).get("theme") === "light") document.documentElement.classList.add("light");
 </script>
 <script>
   // Простая замена ha-card (в Home Assistant она уже есть)
