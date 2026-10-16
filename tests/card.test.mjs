@@ -200,3 +200,18 @@ test("multiplier по графику: тариф меняется с даты", 
   // 03.10 — старый тариф, 04.10 и 05.10 — новый
   assert.deepEqual(el._rows.map((r) => r.v.c0), [4, 5, 10]);
 });
+
+test("period: month + source_period: hour — часы сворачиваются в строку месяца", async () => {
+  const sep = Date.parse("2026-08-31T19:00:00Z"); // 01.09 00:00 по Екатеринбургу
+  const oct = Date.parse("2026-09-30T19:00:00Z"); // 01.10
+  const el = await render(
+    { period: "month", default_range: "year", live_today: false,
+      columns: [{ entity: "sensor.p", stat: "mean", source_period: "hour", agg: "sum", multiplier: 0.001 }] },
+    async (m) => (m.period === "hour"
+      ? { "sensor.p": [{ start: sep, mean: 1000 }, { start: sep + 5 * H, mean: 500 }, { start: oct + 2 * H, mean: 2000 }] }
+      : {})
+  );
+  assert.equal(el._rows.length, 2);
+  assert.deepEqual(el._rows.map((r) => r.v.c0), [1.5, 2]);
+  assert.deepEqual(el._rows.map((r) => r.start), [sep, oct]);
+});

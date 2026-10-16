@@ -8,7 +8,7 @@
  * https://github.com/Lordhmen/stats-table-card
  * Лицензия: MIT. История изменений — CHANGELOG.md.
  */
-const STC_VERSION = "1.2.0";
+const STC_VERSION = "1.2.1";
 
 function tzParts(ms, tz) {
   const dtf = new Intl.DateTimeFormat("en-US", {
@@ -467,7 +467,12 @@ class StatsTableCard extends HTMLElement {
     const sIds = uniq(summaryCells.map((x) => x.entity));
     const sTypes = uniq(summaryCells.map((x) => x.stat || "mean"));
     const keyOf = (ms) =>
-      c.period === "day" ? ymd(ms, tz) : c.period === "hour" ? String(Math.floor(ms / 3600000) * 3600000) : String(ms);
+      c.period === "day" ? ymd(ms, tz)
+      : c.period === "hour" ? String(Math.floor(ms / 3600000) * 3600000)
+      : c.period === "week" || c.period === "month" ? alignDate(ymd(ms, tz), c.period)
+      : String(ms);
+    // Начало строки по ключу: для суток/недель/месяцев — полночь первой даты, для часов — сам час
+    const startOf = (k, s) => (c.period === "hour" ? Number(k) : /^\d{4}-\d{2}-\d{2}$/.test(k) ? zonedMidnight(k, tz) : s);
 
     try {
       const liveToday = c.live_today && c.period === "day" && range.end === range.today && directCols.length;
@@ -497,7 +502,7 @@ class StatsTableCard extends HTMLElement {
           const s = toMs(pt.start);
           if (s < startMs || s >= endMs) continue;
           const k = keyOf(s);
-          if (!buckets.has(k)) buckets.set(k, { key: k, start: s, values: {} });
+          if (!buckets.has(k)) buckets.set(k, { key: k, start: startOf(k, s), values: {} });
           buckets.get(k).values[sid] = pt;
         }
       }
@@ -529,7 +534,7 @@ class StatsTableCard extends HTMLElement {
             const s = toMs(pt.start);
             if (s < startMs || s >= endMs) continue;
             const k = keyOf(s);
-            if (!buckets.has(k)) buckets.set(k, { key: k, start: Number(k) || s, values: {} });
+            if (!buckets.has(k)) buckets.set(k, { key: k, start: startOf(k, s), values: {} });
             (m[k] ||= []).push(pt);
           }
         }
