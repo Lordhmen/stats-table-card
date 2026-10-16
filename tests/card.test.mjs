@@ -185,3 +185,18 @@ test("выделение: статистика и копирование для 
   assert.deepEqual({ n: st.n, sum: st.sum, avg: st.avg, min: st.min, max: st.max }, { n: 2, sum: 3, avg: 1.5, min: 1, max: 2 }); // пустая ячейка не считается
   assert.equal(el._selText(), "1,0\t\r\n2,0\t20,00\r\n\t");
 });
+
+test("multiplier по графику: тариф меняется с даты", async () => {
+  const el = await render(
+    {
+      period: "day", default_range: "3d", live_today: false,
+      columns: [{ entity: "sensor.e", stat: "change", decimals: 2,
+        multiplier: [{ value: 4 }, { since: "2026-10-04", value: 5 }] }],
+    },
+    async (m) => (m.period === "day"
+      ? { "sensor.e": [{ start: MID - 2 * 86400000, change: 1 }, { start: MID - 86400000, change: 1 }, { start: MID, change: 2 }] }
+      : {})
+  );
+  // 03.10 — старый тариф, 04.10 и 05.10 — новый
+  assert.deepEqual(el._rows.map((r) => r.v.c0), [4, 5, 10]);
+});

@@ -8,7 +8,7 @@
  * https://github.com/Lordhmen/stats-table-card
  * Лицензия: MIT. История изменений — CHANGELOG.md.
  */
-const STC_VERSION = "1.1.2";
+const STC_VERSION = "1.2.0";
 
 function tzParts(ms, tz) {
   const dtf = new Intl.DateTimeFormat("en-US", {
@@ -442,6 +442,18 @@ class StatsTableCard extends HTMLElement {
     const endMs = Math.min(zonedMidnight(addDays(range.end, 1), tz), nowMs);
     const statCols = [...this._columns.filter((col) => col.entity), ...(this._hidden || [])];
     const sinceMs = (str) => (!str ? -Infinity : String(str).length > 10 ? Date.parse(str) : zonedMidnight(str, tz));
+    // multiplier: число или график [{since: "YYYY-MM-DD", value: N}, ...] — например, тариф, менявшийся со временем
+    const multAt = (m, startMs) => {
+      if (m === undefined || m === null) return 1;
+      if (!Array.isArray(m)) return Number(m);
+      let best = null;
+      for (const e of m) {
+        if (!e || !nn(e.value)) continue;
+        const t = sinceMs(e.since);
+        if (t <= startMs && (!best || t >= best.t)) best = { t, v: Number(e.value) };
+      }
+      return best ? best.v : 1;
+    };
     const PMS = { "5minute": 300000, hour: 3600000 };
     // Столбцы, собираемые из более мелкой статистики (hour -> day, 5minute -> hour/day)
     const fineCols = statCols.filter((col) => col.source_period && col.source_period !== c.period && PMS[col.source_period]);
@@ -540,7 +552,7 @@ class StatsTableCard extends HTMLElement {
               const pt = b.values[col.entity];
               x = pt ? pt[col.stat] : null;
             }
-            v[col._key] = nn(x) ? Number(x) * (col.multiplier ?? 1) : null;
+            v[col._key] = nn(x) ? Number(x) * multAt(col.multiplier, b.start) : null;
           }
           // prefer: точный источник для завершённых интервалов
           const bEnd =

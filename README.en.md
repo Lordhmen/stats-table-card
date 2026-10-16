@@ -22,7 +22,7 @@ This card reads pre-aggregated statistics through the websocket API (`recorder/s
 
 - Rows per `hour` / `day` / `week` / `month`; any statistic type: `mean`, `min`, `max`, `change`, `state`, `sum`.
 - Build values from finer statistics (`source_period: hour | 5minute`) with `agg: sum | avg | avg_nonzero | min | max | first | last | count`.
-- Column formulas (`c1 / 60`), multipliers, grouped two-level headers.
+- Column formulas (`c1 / 60`), multipliers (also date-based schedules, e.g. tariffs: `multiplier: [{value: 4.84}, {since: "2026-10-01", value: 5.38}]`), grouped two-level headers.
 - Multiple footer rows and summary rows from extra sensors.
 - Threshold highlighting (`below` / `above` / `equals` / `empty`, levels warn / bad / good, row markers, legend).
 - Built-in period picker: date inputs, ◀ ▶ shifting, presets, remembered selection, `?from=&to=` URL parameters.
