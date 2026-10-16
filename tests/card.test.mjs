@@ -215,3 +215,24 @@ test("period: month + source_period: hour — часы сворачиваютс�
   assert.deepEqual(el._rows.map((r) => r.v.c0), [1.5, 2]);
   assert.deepEqual(el._rows.map((r) => r.start), [sep, oct]);
 });
+
+test("entities: столбец-сумма, пустые сенсоры пропускаются", async () => {
+  const el = await render(
+    {
+      period: "day", default_range: "3d", live_today: false,
+      columns: [
+        { name: "Бокс", entities: ["sensor.a", "sensor.b"], stat: "change", multiplier: 2 },
+        { formula: "c0 + 1" },
+      ],
+    },
+    async (m) => (m.period === "day"
+      ? {
+          "sensor.a": [{ start: MID - 2 * 86400000, change: 1 }, { start: MID - 86400000, change: 1 }],
+          "sensor.b": [{ start: MID - 86400000, change: 0.5 }],
+        }
+      : {})
+  );
+  // 03.10 — только a; 04.10 — a+b; 05.10 — нет данных
+  assert.deepEqual(el._rows.map((r) => r.v.c0), [2, 3, null]);
+  assert.deepEqual(el._rows.map((r) => r.v.c1), [3, 4, null]);
+});

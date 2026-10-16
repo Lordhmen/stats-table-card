@@ -61,7 +61,7 @@ Card: `columns`, `period`, `title`, `subtitle` (`{range}` placeholder), `date_he
 
 Period picker: `controls`, `default_range`, `presets` (`today`, `yesterday`, `3d`, `7d`, `30d`, `month`, `prev_month`, `year`), `storage_key`, `url_params`, legacy `start_entity` / `end_entity`.
 
-Column: `entity` or `formula`, `name`, `unit`, `group`, `stat`, `decimals`, `multiplier`, `source_period`, `agg`, `fallback_stat`, `prefer`, `footer`, `footer_decimals`, `footer_label`, `dim`, `highlight`.
+Column: `entity`, `entities` (sum of several sensors, missing values skipped) or `formula`, `name`, `unit`, `group`, `stat`, `decimals`, `multiplier`, `source_period`, `agg`, `fallback_stat`, `prefer`, `footer`, `footer_decimals`, `footer_label`, `dim`, `highlight`.
 
 See [README.md](README.md) for the full option reference and [`examples/`](examples/) for ready-made configurations.
 

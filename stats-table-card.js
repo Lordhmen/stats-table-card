@@ -8,7 +8,7 @@
  * https://github.com/Lordhmen/stats-table-card
  * Лицензия: MIT. История изменений — CHANGELOG.md.
  */
-const STC_VERSION = "1.2.1";
+const STC_VERSION = "1.3.0";
 
 function tzParts(ms, tz) {
   const dtf = new Intl.DateTimeFormat("en-US", {
@@ -169,7 +169,8 @@ class StatsTableCard extends HTMLElement {
       throw new Error("Нужен список columns");
     }
     for (const c of config.columns) {
-      if (!c.entity && !c.formula) throw new Error("У каждого столбца нужен entity или formula");
+      const hasList = Array.isArray(c.entities) && c.entities.length;
+      if (!c.entity && !c.formula && !hasList) throw new Error("У каждого столбца нужен entity, entities или formula");
     }
     this._config = {
       period: "day",
@@ -204,6 +205,15 @@ class StatsTableCard extends HTMLElement {
         _key: `${c._key}p`,
         _hidden: true,
       }));
+    // entities: [...] — столбец-сумма нескольких сенсоров (пустые значения пропускаются)
+    for (const c of this._columns) {
+      if (c.entity || c.formula || !Array.isArray(c.entities)) continue;
+      c._parts = c.entities.map((e, j) => {
+        const { entities, prefer, formula, _parts, ...base } = c;
+        return { ...base, ...(typeof e === "string" ? { entity: e } : e), _key: `${c._key}e${j}`, _hidden: true };
+      });
+      this._hidden.push(...c._parts);
+    }
     this._hasGroups = this._columns.some((c) => c.group);
     this._rangeKey = null;
     this._useEntities = !!(this._config.start_entity && this._config.end_entity) && this._config.range_mode !== "card";
@@ -558,6 +568,11 @@ class StatsTableCard extends HTMLElement {
               x = pt ? pt[col.stat] : null;
             }
             v[col._key] = nn(x) ? Number(x) * multAt(col.multiplier, b.start) : null;
+          }
+          for (const col of this._columns) {
+            if (!col._parts) continue;
+            const xs = col._parts.map((p) => v[p._key]).filter(nn);
+            v[col._key] = xs.length ? xs.reduce((a, x) => a + x, 0) : null;
           }
           // prefer: точный источник для завершённых интервалов
           const bEnd =
